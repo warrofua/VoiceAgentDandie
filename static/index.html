@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ABA Voice Agent Admin</title>
+  <style>
+    :root {
+      font-family: Figtree, Poppins, Avenir, "Avenir Next", "Trebuchet MS", sans-serif;
+      color: #0f172a;
+      background: #f5f7fb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background: linear-gradient(130deg, #f5f7fb 0%, #eaf2ff 100%);
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      gap: 16px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+    }
+
+    .subtitle {
+      color: #334155;
+      margin: 0 0 14px;
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid #dbe4f4;
+      box-shadow: 0 14px 30px -24px #0f172a;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .row {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 0.9rem;
+      color: #334155;
+      font-weight: 600;
+    }
+
+    input, textarea, button {
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      font: inherit;
+    }
+
+    textarea {
+      min-height: 86px;
+      resize: vertical;
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      background: #1d4ed8;
+      color: white;
+      font-weight: 600;
+      width: fit-content;
+      transition: transform 0.08s ease, opacity 0.2s ease;
+    }
+
+    button:hover {
+      opacity: 0.92;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    .muted {
+      color: #64748b;
+      font-size: 0.92rem;
+    }
+
+    pre {
+      margin: 10px 0 0;
+      white-space: pre-wrap;
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 12px;
+      border-radius: 10px;
+      min-height: 90px;
+    }
+
+    .status {
+      font-weight: 600;
+      color: #0284c7;
+    }
+
+    @media (max-width: 860px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ABA Voice Agent - Demo UI</h1>
+    <p class="subtitle">Basic web panel for quick API checks and call tools.</p>
+
+    <section class="card">
+      <h2>Service Status</h2>
+      <div class="row">
+        <button id="healthBtn">Check /health</button>
+      </div>
+      <pre id="healthResult">Ready to check health.</pre>
+    </section>
+
+    <section class="card grid">
+      <div class="row">
+        <h2>Initiate Outbound Call</h2>
+        <label for="phoneInput">Phone Number</label>
+        <input id="phoneInput" placeholder="+1234567890" />
+
+        <label for="messageInput">Message</label>
+        <textarea id="messageInput" placeholder="This is a reminder call."></textarea>
+
+        <button id="callBtn">Place Call</button>
+        <p class="muted">Uses: <code>POST /api/v1/outbound/call</code></p>
+        <pre id="callResult">No outbound call yet.</pre>
+      </div>
+
+      <div class="row">
+        <h2>Lookup Call & Transcript</h2>
+        <label for="callIdInput">Call ID</label>
+        <input id="callIdInput" type="number" min="1" placeholder="1" />
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button id="callDetailsBtn">Get Call Details</button>
+          <button id="transcriptBtn">Get Transcript</button>
+        </div>
+
+        <p class="status" id="lookupStatus">No lookup yet.</p>
+        <pre id="callLookupResult">No call data yet.</pre>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const healthBtn = document.getElementById("healthBtn");
+    const healthResult = document.getElementById("healthResult");
+
+    const callBtn = document.getElementById("callBtn");
+    const phoneInput = document.getElementById("phoneInput");
+    const messageInput = document.getElementById("messageInput");
+    const callResult = document.getElementById("callResult");
+
+    const callIdInput = document.getElementById("callIdInput");
+    const callDetailsBtn = document.getElementById("callDetailsBtn");
+    const transcriptBtn = document.getElementById("transcriptBtn");
+    const lookupStatus = document.getElementById("lookupStatus");
+    const callLookupResult = document.getElementById("callLookupResult");
+
+    const pretty = (obj) => JSON.stringify(obj, null, 2);
+    const errMsg = (err) => ({ error: String(err) });
+
+    healthBtn.addEventListener("click", async () => {
+      try {
+        const res = await fetch("/health");
+        const data = await res.json();
+        healthResult.textContent = pretty(data);
+      } catch (e) {
+        healthResult.textContent = pretty(errMsg(e));
+      }
+    });
+
+    callBtn.addEventListener("click", async () => {
+      const phone_number = phoneInput.value.trim();
+      const message = messageInput.value.trim();
+      if (!phone_number || !message) {
+        callResult.textContent = "Please fill in phone number and message.";
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/v1/outbound/call?phone_number=${encodeURIComponent(phone_number)}&message=${encodeURIComponent(message)}`, {
+          method: "POST"
+        });
+        const data = await res.json();
+        callResult.textContent = pretty(data);
+      } catch (e) {
+        callResult.textContent = pretty(errMsg(e));
+      }
+    });
+
+    const fetchCallDetails = async () => {
+      const callId = Number(callIdInput.value);
+      if (!Number.isInteger(callId) || callId <= 0) {
+        lookupStatus.textContent = "Please enter a valid call ID.";
+        return;
+      }
+      lookupStatus.textContent = "Loading call details...";
+      try {
+        const res = await fetch(`/api/v1/calls/${callId}`);
+        const data = await res.json();
+        callLookupResult.textContent = pretty(data);
+        lookupStatus.textContent = "Call details loaded.";
+      } catch (e) {
+        callLookupResult.textContent = pretty(errMsg(e));
+        lookupStatus.textContent = "Call details failed.";
+      }
+    };
+
+    const fetchTranscript = async () => {
+      const callId = Number(callIdInput.value);
+      if (!Number.isInteger(callId) || callId <= 0) {
+        lookupStatus.textContent = "Please enter a valid call ID.";
+        return;
+      }
+      lookupStatus.textContent = "Loading transcript...";
+      try {
+        const res = await fetch(`/api/v1/calls/${callId}/transcript`);
+        const data = await res.json();
+        callLookupResult.textContent = pretty(data);
+        lookupStatus.textContent = "Transcript loaded.";
+      } catch (e) {
+        callLookupResult.textContent = pretty(errMsg(e));
+        lookupStatus.textContent = "Transcript failed.";
+      }
+    };
+
+    callDetailsBtn.addEventListener("click", fetchCallDetails);
+    transcriptBtn.addEventListener("click", fetchTranscript);
+  </script>
+</body>
+</html>
