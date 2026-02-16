@@ -4,6 +4,11 @@
 
 The ABA Voice Agent is a conversational AI system that handles phone-based insurance inquiries for ABA therapy services using speech recognition, natural language processing, and text-to-speech technologies.
 
+Current implementation notes:
+
+- API routes are mounted at `/api/v1` plus root routes `/`, `/health`, and `/ui`.
+- Conversation state is currently stored in-memory in `active_conversations` (not Redis-backed yet).
+
 ## High-Level Architecture
 
 ```
@@ -167,8 +172,8 @@ The ABA Voice Agent is a conversational AI system that handles phone-based insur
 - `audit_logs` - HIPAA compliance logging
 
 #### Session Management
-- Redis for active conversation state
-- In-memory fallback for development
+- In-memory conversation map for active sessions (`active_conversations`)
+- Redis is defined in configuration and can be adopted as a production persistence layer
 - 30-minute session timeout
 
 ### 5. API Layer
@@ -318,30 +323,16 @@ TTS → Audio → Play to caller
 └─────────────────────────────────────────┘
 ```
 
-### Authentication & Authorization
+### Authentication & Authorization (Planned)
 
 ```
-Request → API Gateway
+Request → API application
    │
    ▼
-Check API Key/JWT Token
+Process Request
    │
-   ├─ Invalid → 401 Unauthorized
-   │
-   └─ Valid
-       │
-       ▼
-   Check Permissions
-       │
-       ├─ Insufficient → 403 Forbidden
-       │
-       └─ Authorized
-           │
-           ▼
-       Process Request
-           │
-           ▼
-       Log to Audit Trail
+   ▼
+Log to Audit Trail
 ```
 
 ## Performance Considerations
